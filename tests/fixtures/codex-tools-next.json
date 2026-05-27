@@ -1,0 +1,38 @@
+{
+  "tools": [
+    {
+      "name": "file_write",
+      "description": "Write content to a local file after review.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["path", "content"],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "File body"
+          },
+          "path": {
+            "type": "string",
+            "description": "Destination path"
+          }
+        }
+      }
+    },
+    {
+      "name": "message_send",
+      "description": "Send a message to a channel.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["channel", "content"],
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

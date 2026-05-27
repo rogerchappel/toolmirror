@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
-    "test": "node --test --experimental-strip-types tests/**/*.test.ts",
+    "test": "npm run build && node --test tests/**/*.test.mjs",
     "smoke": "bash scripts/smoke.sh",
     "package:smoke": "npm pack --dry-run",
     "release:check": "npm test && npm run check && npm run build && npm run smoke && npm run package:smoke"

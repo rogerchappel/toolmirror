@@ -1,0 +1,43 @@
+{
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "web_search",
+        "description": "Search the web for public information.",
+        "parameters": {
+          "type": "object",
+          "required": ["query"],
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "file_write",
+      "description": "Write content to a local file.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["path", "content"],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "File body"
+          },
+          "path": {
+            "type": "string",
+            "description": "Destination path"
+          },
+          "api_token": {
+            "type": "string",
+            "default": "secret-value"
+          }
+        }
+      }
+    }
+  ]
+}
