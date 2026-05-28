@@ -9,7 +9,25 @@ format and uses semantic versioning when versioned releases are published.
 
 ### Added
 
-- Initial project setup.
+- Initial local-first `toolmirror` CLI with `import`, `docs`, `diff`, and
+  `risk` commands.
+- Stable catalog normalization, Markdown rendering, diff reports, and risk
+  classification for tool surfaces.
+- Release readiness scaffolding, CI workflows, smoke tests, and ReleaseBox
+  configuration.
+- CLI regression coverage for stdin imports, lockfile documentation, documented
+  diff/risk exit codes, and malformed JSON errors.
+- Release candidate notes in `RELEASE_NOTES.md`.
+
+### Fixed
+
+- Preserved original tool source attribution when generating docs from an
+  existing `toolmirror.lock.json`.
+
+### Changed
+
+- Included contributor, security, changelog, release notes, and docs files in
+  the published npm package.
 
 ## Release Links
 
