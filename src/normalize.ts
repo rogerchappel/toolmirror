@@ -36,11 +36,55 @@ export function normalizeCatalogs(inputs: Array<{ label: string; value: JsonValu
 }
 
 export function coerceCatalog(value: JsonValue, label = 'catalog'): ToolCatalog {
-  if (isObject(value) && value.schemaVersion === 1 && value.generatedBy === 'toolmirror' && Array.isArray(value.tools)) {
-    return normalizeCatalogs([{ label, value: value.tools }]);
+  if (isToolMirrorCatalog(value)) {
+    const catalog = value as unknown as ToolCatalog;
+    return {
+      schemaVersion: 1,
+      generatedBy: 'toolmirror',
+      tools: catalog.tools
+        .map((tool) => ({
+          ...tool,
+          parameters: [...tool.parameters].sort((a, b) => stableCompare(a.name, b.name)),
+          schema: sortJson(redactSensitiveDefaults(tool.schema)),
+          risk: scanRisk(tool.name, tool.description, tool.parameters.map((parameter) => parameter.name))
+        }))
+        .sort((a, b) => stableCompare(a.name, b.name))
+    };
   }
 
   return normalizeCatalogs([{ label, value }]);
+}
+
+function isToolMirrorCatalog(value: JsonValue): boolean {
+  return (
+    isObject(value) &&
+    value.schemaVersion === 1 &&
+    value.generatedBy === 'toolmirror' &&
+    Array.isArray(value.tools) &&
+    value.tools.every(isToolDefinition)
+  );
+}
+
+function isToolDefinition(value: JsonValue): boolean {
+  return (
+    isObject(value) &&
+    typeof value.name === 'string' &&
+    typeof value.description === 'string' &&
+    Array.isArray(value.parameters) &&
+    value.parameters.every(isToolParameter) &&
+    value.schema !== undefined &&
+    typeof value.source === 'string'
+  );
+}
+
+function isToolParameter(value: JsonValue): boolean {
+  return (
+    isObject(value) &&
+    typeof value.name === 'string' &&
+    typeof value.type === 'string' &&
+    typeof value.required === 'boolean' &&
+    typeof value.description === 'string'
+  );
 }
 
 function extractCandidates(value: JsonValue, source: string): Candidate[] {
