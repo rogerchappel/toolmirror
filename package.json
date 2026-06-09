@@ -13,7 +13,11 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -41,5 +45,13 @@
   },
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rogerchappel/toolmirror.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rogerchappel/toolmirror/issues"
+  },
+  "homepage": "https://github.com/rogerchappel/toolmirror#readme"
 }
