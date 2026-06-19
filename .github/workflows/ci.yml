@@ -48,7 +48,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run optional Node checks
+      - name: Run package release checks
         run: |
           set -euo pipefail
 
