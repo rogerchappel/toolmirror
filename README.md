@@ -89,3 +89,7 @@ npm run release:check
 ```
 
 Use `npm run package:smoke` or `npm pack --dry-run` to confirm the published tarball includes the support docs and runnable package contents.
+
+## Limitations
+
+toolmirror summarizes local log text and deterministic matches. It can miss domain-specific failures, over-group unrelated lines, or redact context that a human reviewer still needs, so use the output as triage evidence rather than the final incident record.
