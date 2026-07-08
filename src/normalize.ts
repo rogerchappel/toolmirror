@@ -10,6 +10,8 @@ interface Candidate {
   source: string;
 }
 
+const OPENAPI_METHODS = new Set(['delete', 'get', 'head', 'options', 'patch', 'post', 'put']);
+
 export function normalizeCatalogs(inputs: Array<{ label: string; value: JsonValue }>): ToolCatalog {
   const byName = new Map<string, ToolDefinition[]>();
 
@@ -82,6 +84,8 @@ function walk(value: JsonValue, source: string, candidates: Candidate[]): void {
     return;
   }
 
+  collectOpenApiOperations(value, source, candidates);
+
   for (const key of ['tools', 'functions']) {
     const child = value[key];
     if (Array.isArray(child)) {
@@ -93,6 +97,79 @@ function walk(value: JsonValue, source: string, candidates: Candidate[]): void {
   if (isObject(capabilities) && Array.isArray(capabilities.tools)) {
     capabilities.tools.forEach((item, index) => walk(item, `${source}.capabilities.tools[${index}]`, candidates));
   }
+}
+
+function collectOpenApiOperations(value: JsonObject, source: string, candidates: Candidate[]): void {
+  if (typeof value.openapi !== 'string' || !isObject(value.paths)) return;
+
+  for (const [pathName, pathItem] of Object.entries(value.paths)) {
+    if (!isObject(pathItem)) continue;
+    for (const [method, operation] of Object.entries(pathItem)) {
+      if (!OPENAPI_METHODS.has(method.toLowerCase()) || !isObject(operation)) continue;
+      const operationId = typeof operation.operationId === 'string' ? operation.operationId.trim() : '';
+      const name = operationId || `${method}_${pathName}`.replace(/[^A-Za-z0-9_]+/g, '_').replace(/^_|_$/g, '');
+      const description = typeof operation.description === 'string'
+        ? operation.description.trim()
+        : typeof operation.summary === 'string'
+          ? operation.summary.trim()
+          : '';
+      candidates.push({
+        name,
+        description,
+        schema: openApiInputSchema(pathItem, operation, method, pathName),
+        source: `${source}.paths.${pathName}.${method}`
+      });
+    }
+  }
+}
+
+function openApiInputSchema(pathItem: JsonObject, operation: JsonObject, method: string, pathName: string): JsonObject {
+  const properties: JsonObject = {
+    method: { type: 'string', description: 'HTTP method', const: method.toUpperCase() },
+    path: { type: 'string', description: 'OpenAPI path', const: pathName }
+  };
+  const required = new Set<string>();
+  const parameters = new Map<string, JsonObject>();
+  for (const parameter of [...openApiParameters(pathItem), ...openApiParameters(operation)]) {
+    const parameterName = typeof parameter.name === 'string' ? parameter.name.trim() : '';
+    if (parameterName) parameters.set(parameterName, parameter);
+  }
+
+  for (const [parameterName, parameter] of parameters) {
+    const schema: JsonObject = isObject(parameter.schema) ? { ...parameter.schema } : { type: 'string' };
+    if (typeof parameter.description === 'string' && parameter.description.trim()) {
+      schema.description = parameter.description.trim();
+    }
+    properties[parameterName] = schema;
+    if (parameter.required === true || parameter.in === 'path') required.add(parameterName);
+  }
+
+  const requestBody = openApiRequestBody(operation.requestBody);
+  if (requestBody) {
+    properties.body = requestBody.schema;
+    if (requestBody.required) required.add('body');
+  }
+
+  const schema: JsonObject = { type: 'object', properties };
+  if (required.size > 0) schema.required = [...required].sort(stableCompare);
+  return schema;
+}
+
+function openApiParameters(container: JsonObject): JsonObject[] {
+  return Array.isArray(container.parameters) ? container.parameters.filter(isObject) : [];
+}
+
+function openApiRequestBody(value: JsonValue | undefined): { schema: JsonValue; required: boolean } | undefined {
+  if (!isObject(value)) return undefined;
+
+  if (typeof value.$ref === 'string') {
+    return { schema: { $ref: value.$ref }, required: value.required === true };
+  }
+
+  if (!isObject(value.content)) return undefined;
+  const mediaType = value.content['application/json'] ?? Object.values(value.content).find(isObject);
+  if (!isObject(mediaType) || mediaType.schema === undefined) return undefined;
+  return { schema: mediaType.schema, required: value.required === true };
 }
 
 function candidateFromObject(value: JsonObject, source: string): Candidate | undefined {
