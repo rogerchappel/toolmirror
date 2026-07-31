@@ -31,17 +31,21 @@ Generate Markdown documentation:
 toolmirror docs toolmirror.lock.json --output TOOLING.md
 ```
 
-Compare two snapshots. The command exits `2` when catalogs differ:
+Compare exactly two snapshots. The command exits `2` when catalogs differ:
 
 ```sh
 toolmirror diff old.lock.json new.lock.json
 ```
 
-Review risky tools. `--fail-on high` exits non-zero when high-risk tools are present:
+Review risky tools. `--fail-on high` exits `3` when high-risk tools are present:
 
 ```sh
-toolmirror risk toolmirror.lock.json --min medium --fail-on high
+toolmirror risk toolmirror.lock.json --min medium --fail-on high --output risk.txt
 ```
+
+Each command accepts only the options shown above. Unknown options, missing option
+values, missing inputs, and extra inputs exit `1` with a usage error. Use `--help`
+to print the command summary and exit `0`.
 
 ## Supported input shapes
 
