@@ -16,12 +16,24 @@ interface ParsedArgs {
   options: Map<string, string | boolean>;
 }
 
+interface CommandContract {
+  minPositionals: number;
+  maxPositionals?: number;
+  options: readonly string[];
+}
+
 const riskLevels: RiskLevel[] = ['low', 'medium', 'high'];
+const commandContracts: Record<Command, CommandContract> = {
+  import: { minPositionals: 1, options: ['output'] },
+  docs: { minPositionals: 1, maxPositionals: 1, options: ['output'] },
+  diff: { minPositionals: 2, maxPositionals: 2, options: ['format', 'output'] },
+  risk: { minPositionals: 1, maxPositionals: 1, options: ['min', 'fail-on', 'output'] },
+  help: { minPositionals: 0, maxPositionals: 0, options: [] }
+};
 
 async function main(argv: string[]): Promise<number> {
-  const args = parseArgs(argv);
-
   try {
+    const args = parseArgs(argv);
     switch (args.command) {
       case 'import':
         return await importCommand(args);
@@ -126,10 +138,17 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
 
-    const [rawName, inlineValue] = arg.slice(2).split('=', 2);
+    const option = arg.slice(2);
+    const equalsIndex = option.indexOf('=');
+    const rawName = equalsIndex === -1 ? option : option.slice(0, equalsIndex);
+    const inlineValue = equalsIndex === -1 ? undefined : option.slice(equalsIndex + 1);
     if (!rawName) throw new Error(`invalid option: ${arg}`);
+    if (!commandContracts[command].options.includes(rawName)) {
+      throw new Error(`unsupported option for ${command}: --${rawName}`);
+    }
 
     if (inlineValue !== undefined) {
+      if (inlineValue.length === 0) throw new Error(`--${rawName} requires a value`);
       options.set(rawName, inlineValue);
       continue;
     }
@@ -138,17 +157,22 @@ function parseArgs(argv: string[]): ParsedArgs {
     if (next && !next.startsWith('--')) {
       options.set(rawName, next);
       index += 1;
-    } else {
-      options.set(rawName, true);
-    }
+    } else throw new Error(`--${rawName} requires a value`);
+  }
+
+  const contract = commandContracts[command];
+  if (positionals.length < contract.minPositionals) {
+    throw new Error(`${command} requires at least ${contract.minPositionals} positional argument${contract.minPositionals === 1 ? '' : 's'}`);
+  }
+  if (contract.maxPositionals !== undefined && positionals.length > contract.maxPositionals) {
+    throw new Error(`${command} accepts ${contract.maxPositionals} positional argument${contract.maxPositionals === 1 ? '' : 's'}`);
   }
 
   return { command, positionals, options };
 }
 
 function outputPath(args: ParsedArgs): string | undefined {
-  const output = args.options.get('output');
-  return typeof output === 'string' ? output : undefined;
+  return args.options.get('output') as string | undefined;
 }
 
 function stringOption(args: ParsedArgs, name: string, fallback: string): string {
@@ -220,7 +244,7 @@ function usage(): string {
   toolmirror import <catalog.json...> [--output toolmirror.lock.json]
   toolmirror docs <catalog.json> [--output TOOLING.md]
   toolmirror diff <before.json> <after.json> [--format text|json] [--output diff.txt]
-  toolmirror risk <catalog.json> [--min low|medium|high] [--fail-on low|medium|high]
+  toolmirror risk <catalog.json> [--min low|medium|high] [--fail-on low|medium|high] [--output risk.txt]
 `;
 }
 
