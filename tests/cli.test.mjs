@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -60,6 +60,21 @@ describe('CLI argument contracts', () => {
     const imported = await run(['import', '-', fixture], { input: json });
     assert.equal(imported.code, 0, imported.stderr);
     assert.equal(JSON.parse(imported.stdout).tools.length, 2);
+  });
+
+  it('fails conflicting imports with both source locations and no output', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'toolmirror-conflict-'));
+    const first = join(directory, 'first.json');
+    const second = join(directory, 'second.json');
+    const output = join(directory, 'output.json');
+    await writeFile(first, JSON.stringify([{ name: 'shared', parameters: { type: 'string' } }]));
+    await writeFile(second, JSON.stringify([{ name: 'shared', parameters: { type: 'number' } }]));
+
+    const result = await run(['import', second, first, '--output', output]);
+    assert.equal(result.code, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /toolmirror: conflicting definitions for tool "shared" at first\.json\[0\], second\.json\[0\]/);
+    await assert.rejects(readFile(output, 'utf8'), { code: 'ENOENT' });
   });
 
   it('preserves diff exit 2 and risk exit 3', async () => {
