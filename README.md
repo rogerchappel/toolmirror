@@ -25,6 +25,12 @@ Normalize one or more tool dumps:
 toolmirror import tools.json --output toolmirror.lock.json
 ```
 
+When multiple inputs define the same tool name, identical normalized definitions
+are collapsed into one entry. Its `source` is the lexicographically first source
+location, so reversing the inputs does not change the lockfile. Conflicting
+same-name definitions are rejected with exit status `1`; the diagnostic names
+the tool and every conflicting source location instead of silently choosing one.
+
 Generate Markdown documentation:
 
 ```sh
