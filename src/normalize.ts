@@ -1,6 +1,6 @@
 import { redactSensitiveDefaults } from './redact.js';
 import { scanRisk } from './risk.js';
-import { isObject, sortJson, stableCompare } from './stable.js';
+import { isObject, sortJson, stableCompare, stableStringify } from './stable.js';
 import type { JsonObject, JsonValue, ToolCatalog, ToolDefinition, ToolParameter } from './types.js';
 
 interface Candidate {
@@ -11,28 +11,47 @@ interface Candidate {
 }
 
 export function normalizeCatalogs(inputs: Array<{ label: string; value: JsonValue }>): ToolCatalog {
-  const byName = new Map<string, ToolDefinition>();
+  const byName = new Map<string, ToolDefinition[]>();
 
   for (const input of inputs) {
     for (const candidate of extractCandidates(input.value, input.label)) {
       const schema = sortJson(redactSensitiveDefaults(candidate.schema));
       const parameters = summarizeParameters(schema);
-      byName.set(candidate.name, {
+      const definition = {
         name: candidate.name,
         description: candidate.description,
         parameters,
         schema,
         source: candidate.source,
         risk: scanRisk(candidate.name, candidate.description, parameters.map((parameter) => parameter.name))
-      });
+      };
+      const definitions = byName.get(candidate.name) ?? [];
+      definitions.push(definition);
+      byName.set(candidate.name, definitions);
     }
   }
+
+  const tools = [...byName.entries()].map(([name, definitions]) => resolveDuplicate(name, definitions));
 
   return {
     schemaVersion: 1,
     generatedBy: 'toolmirror',
-    tools: [...byName.values()].sort((a, b) => stableCompare(a.name, b.name))
+    tools: tools.sort((a, b) => stableCompare(a.name, b.name))
   };
+}
+
+function resolveDuplicate(name: string, definitions: ToolDefinition[]): ToolDefinition {
+  const ordered = [...definitions].sort((a, b) => stableCompare(a.source, b.source));
+  const signatures = new Set(ordered.map(definitionSignature));
+  if (signatures.size > 1) {
+    throw new Error(`conflicting definitions for tool "${name}" at ${ordered.map((item) => item.source).join(', ')}`);
+  }
+  return ordered[0];
+}
+
+function definitionSignature(definition: ToolDefinition): string {
+  const { source: _source, ...content } = definition;
+  return stableStringify(content, 0);
 }
 
 export function coerceCatalog(value: JsonValue, label = 'catalog'): ToolCatalog {
