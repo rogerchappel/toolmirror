@@ -82,4 +82,33 @@ describe('CLI argument contracts', () => {
     assert.equal((await run(['diff', fixture, different, '--format', 'json'])).code, 2);
     assert.equal((await run(['risk', fixture, '--fail-on', 'high'])).code, 3);
   });
+
+  it('classifies camelCase and PascalCase tool names during import and risk reporting', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'toolmirror-camel-risk-'));
+    const input = join(directory, 'tools.json');
+    const lockfile = join(directory, 'toolmirror.lock.json');
+    await writeFile(input, JSON.stringify([
+      { name: 'deleteFile', parameters: { type: 'object', properties: {} } },
+      { name: 'ExecuteCommand', parameters: { type: 'object', properties: {} } },
+      { name: 'sendEmail', parameters: { type: 'object', properties: {} } },
+      { name: 'senderProfile', parameters: { type: 'object', properties: {} } }
+    ]));
+
+    const imported = await run(['import', input, '--output', lockfile]);
+    assert.equal(imported.code, 0, imported.stderr);
+    const catalog = JSON.parse(await readFile(lockfile, 'utf8'));
+    assert.deepEqual(catalog.tools.map(({ name, risk }) => [name, risk.level]), [
+      ['deleteFile', 'high'],
+      ['ExecuteCommand', 'high'],
+      ['sendEmail', 'high'],
+      ['senderProfile', 'low']
+    ]);
+
+    const report = await run(['risk', lockfile, '--min', 'low']);
+    assert.equal(report.code, 0, report.stderr);
+    assert.match(report.stdout, /deleteFile: high - matches high-risk verb\(s\): delete/);
+    assert.match(report.stdout, /ExecuteCommand: high - matches high-risk verb\(s\): execute/);
+    assert.match(report.stdout, /sendEmail: high - matches high-risk verb\(s\): send/);
+    assert.match(report.stdout, /senderProfile: low - no risky verbs or sensitive parameters detected/);
+  });
 });
