@@ -5,7 +5,7 @@ const mediumVerbs = ['create', 'install', 'modify', 'move', 'patch', 'post', 'pu
 const riskyParameterPattern = /(command|content|destination|email|file|path|recipient|token|url)/i;
 
 export function scanRisk(name: string, description: string, parameterNames: string[]): ToolRisk {
-  const haystack = `${name} ${description}`.toLowerCase();
+  const haystack = `${splitIdentifier(name)} ${description}`.toLowerCase();
   const verbs = [...highVerbs, ...mediumVerbs].filter((verb) => containsVerb(haystack, verb));
   const reasons: string[] = [];
   let level: RiskLevel = 'low';
@@ -44,6 +44,12 @@ export function scanRisk(name: string, description: string, parameterNames: stri
 export function filterByMinimumRisk(tools: ToolDefinition[], minimum: RiskLevel): ToolDefinition[] {
   const order: Record<RiskLevel, number> = { low: 0, medium: 1, high: 2 };
   return tools.filter((tool) => order[tool.risk.level] >= order[minimum]);
+}
+
+function splitIdentifier(value: string): string {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
 }
 
 function containsVerb(value: string, verb: string): boolean {
