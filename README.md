@@ -49,6 +49,9 @@ Review risky tools. `--fail-on high` exits `3` when high-risk tools are present:
 toolmirror risk toolmirror.lock.json --min medium --fail-on high --output risk.txt
 ```
 
+Risk scanning recognizes verbs in delimited, camelCase, and PascalCase tool names
+(for example, `delete_file`, `sendEmail`, and `ExecuteCommand`) as well as descriptions.
+
 Each command accepts only the options shown above. Unknown options, missing option
 values, missing inputs, and extra inputs exit `1` with a usage error. Use `--help`
 to print the command summary and exit `0`.
