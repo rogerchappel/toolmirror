@@ -101,7 +101,7 @@ npm run package:smoke
 npm run release:check
 ```
 
-Use `npm run package:smoke` or `npm pack --dry-run` to confirm the published tarball includes the support docs and runnable package contents.
+Use `npm run package:smoke` to inspect `npm pack --dry-run --json` and assert that the published tarball includes the runtime entrypoint, CLI, declarations, root project documents, every file under `docs/`, and every fixture under `tests/fixtures/`.
 
 ## Limitations
 
