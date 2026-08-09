@@ -17,14 +17,16 @@
     "LICENSE",
     "SECURITY.md",
     "CHANGELOG.md",
-    "CONTRIBUTING.md"
+    "CONTRIBUTING.md",
+    "docs",
+    "tests/fixtures"
   ],
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
     "test": "npm run build && node --test tests/**/*.test.mjs",
     "smoke": "bash scripts/smoke.sh",
-    "package:smoke": "npm pack --dry-run",
+    "package:smoke": "node scripts/check-package-contents.mjs",
     "release:check": "npm test && npm run check && npm run build && npm run smoke && npm run package:smoke"
   },
   "keywords": [
