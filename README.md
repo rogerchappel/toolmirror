@@ -101,6 +101,11 @@ npm run package:smoke
 npm run release:check
 ```
 
+The standard test command discovers every top-level `tests/*.test.mjs` suite
+with Node before invoking the test runner, avoiding shell-specific glob
+behavior. It prints the discovered suite list so CI logs show the exact test
+coverage used by `npm test` and `npm run release:check`.
+
 Use `npm run package:smoke` to inspect `npm pack --dry-run --json` and assert that the published tarball includes the runtime entrypoint, CLI, declarations, root project documents, every file under `docs/`, and every fixture under `tests/fixtures/`.
 
 ## Limitations
