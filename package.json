@@ -24,7 +24,7 @@
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
-    "test": "npm run build && node --test tests/**/*.test.mjs",
+    "test": "npm run build && node scripts/run-tests.mjs",
     "smoke": "bash scripts/smoke.sh",
     "package:smoke": "node scripts/check-package-contents.mjs",
     "release:check": "npm test && npm run check && npm run build && npm run smoke && npm run package:smoke"
