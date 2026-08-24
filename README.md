@@ -110,4 +110,10 @@ Use `npm run package:smoke` to inspect `npm pack --dry-run --json` and assert th
 
 ## Limitations
 
-toolmirror summarizes local log text and deterministic matches. It can miss domain-specific failures, over-group unrelated lines, or redact context that a human reviewer still needs, so use the output as triage evidence rather than the final incident record.
+toolmirror extracts supported tool-definition shapes from JSON and normalizes
+them into a common catalog; it does not interpret every vendor-specific schema
+extension. Default-value redaction is heuristic and is not a substitute for
+preventing secrets from entering source catalogs. Risk levels are likewise
+name- and parameter-based signals, not proof that a tool is safe or unsafe.
+Review imported definitions, generated documentation, diffs, and risk reports
+before using them for security or release decisions.
