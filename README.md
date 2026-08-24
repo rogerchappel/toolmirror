@@ -60,6 +60,8 @@ to print the command summary and exit `0`.
 
 `toolmirror` detects common tool definitions under `tools`, `functions`, and `capabilities.tools`. Each tool can use `inputSchema`, `parameters`, or `schema` for JSON Schema-like inputs.
 
+OpenAPI 3.x files are also supported. Each path operation becomes a stable tool definition with its HTTP method, path, parameters, and JSON request body represented in the input schema. The test fixtures include a small Xquik OpenAPI slice for tweet search and user lookup.
+
 Sensitive defaults, examples, constants, and enum values are redacted when their path includes names such as `token`, `secret`, `password`, `api_key`, or `credential`.
 
 ## Verify

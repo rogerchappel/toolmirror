@@ -51,4 +51,58 @@ describe('normalizeCatalogs', () => {
     assert.throws(normalize([{ label: 'first.json', value: [first] }, { label: 'second.json', value: [second] }]), message);
     assert.throws(normalize([{ label: 'second.json', value: [second] }, { label: 'first.json', value: [first] }]), message);
   });
+
+  it('extracts OpenAPI operations as stable tool definitions', async () => {
+    const catalog = normalizeCatalogs([{ label: 'xquik-openapi.json', value: await fixture('./fixtures/xquik-openapi.json') }]);
+
+    assert.deepEqual(
+      catalog.tools.map((tool) => tool.name),
+      ['getUser', 'searchTweets']
+    );
+    assert.equal(catalog.tools[0].source, 'xquik-openapi.json.paths./x/users/{id}.get');
+    assert.deepEqual(
+      catalog.tools[1].parameters.map((parameter) => parameter.name),
+      ['limit', 'method', 'path', 'q']
+    );
+    assert.equal(catalog.tools[0].parameters.find((parameter) => parameter.name === 'id').required, true);
+    assert.equal(catalog.tools[1].parameters.find((parameter) => parameter.name === 'q').required, true);
+    assert.equal(catalog.tools[1].schema.properties.limit.maximum, 200);
+  });
+
+  it('extracts an OpenAPI JSON request body', () => {
+    const catalog = normalizeCatalogs([
+      {
+        label: 'inline-openapi.json',
+        value: {
+          openapi: '3.1.0',
+          paths: {
+            '/posts': {
+              post: {
+                operationId: 'createPost',
+                requestBody: {
+                  required: true,
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: { text: { type: 'string' } },
+                        required: ['text']
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]);
+
+    assert.deepEqual(
+      catalog.tools[0].parameters.map((parameter) => parameter.name),
+      ['body', 'method', 'path']
+    );
+    assert.equal(catalog.tools[0].parameters[0].required, true);
+    assert.deepEqual(catalog.tools[0].schema.properties.body.required, ['text']);
+  });
 });
