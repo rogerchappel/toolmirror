@@ -56,7 +56,18 @@ function definitionSignature(definition: ToolDefinition): string {
 
 export function coerceCatalog(value: JsonValue, label = 'catalog'): ToolCatalog {
   if (isObject(value) && value.schemaVersion === 1 && value.generatedBy === 'toolmirror' && Array.isArray(value.tools)) {
-    return normalizeCatalogs([{ label, value: value.tools }]);
+    return normalizeCatalogs(
+      value.tools.map((tool, index) => ({
+        label: isObject(tool) && typeof tool.source === 'string' ? tool.source : `${label}.tools[${index}]`,
+        value: isObject(tool) && tool.schema !== undefined
+          ? {
+              name: tool.name,
+              description: tool.description,
+              schema: tool.schema
+            }
+          : tool
+      }))
+    );
   }
 
   return normalizeCatalogs([{ label, value }]);
