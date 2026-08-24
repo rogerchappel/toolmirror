@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
-import { normalizeCatalogs } from '../dist/normalize.js';
+import { coerceCatalog, normalizeCatalogs } from '../dist/normalize.js';
 
 async function fixture(path) {
   return JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
@@ -50,5 +50,16 @@ describe('normalizeCatalogs', () => {
 
     assert.throws(normalize([{ label: 'first.json', value: [first] }, { label: 'second.json', value: [second] }]), message);
     assert.throws(normalize([{ label: 'second.json', value: [second] }, { label: 'first.json', value: [first] }]), message);
+  });
+
+  it('preserves provenance when coercing an emitted toolmirror catalog', async () => {
+    const imported = normalizeCatalogs([{ label: 'codex-tools.json', value: await fixture('./fixtures/codex-tools.json') }]);
+    const reloaded = coerceCatalog(imported, 'toolmirror.lock.json');
+
+    assert.deepEqual(
+      reloaded.tools.map(({ name, source }) => [name, source]),
+      imported.tools.map(({ name, source }) => [name, source])
+    );
+    assert.deepEqual(reloaded, imported);
   });
 });

@@ -62,6 +62,30 @@ describe('CLI argument contracts', () => {
     assert.equal(JSON.parse(imported.stdout).tools.length, 2);
   });
 
+  it('keeps imported provenance through docs, diff, and risk reloads', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'toolmirror-provenance-'));
+    const lockfile = join(directory, 'toolmirror.lock.json');
+    const imported = await run(['import', fixture, '--output', lockfile]);
+    assert.equal(imported.code, 0, imported.stderr);
+
+    const catalog = JSON.parse(await readFile(lockfile, 'utf8'));
+    const sources = catalog.tools.map(({ source }) => source);
+    assert.deepEqual(sources, ['codex-tools.json.tools[1]', 'codex-tools.json.tools[0].function']);
+
+    const docs = await run(['docs', lockfile]);
+    assert.equal(docs.code, 0, docs.stderr);
+    assert.deepEqual([...docs.stdout.matchAll(/^- Source: `(.+)`$/gm)].map((match) => match[1]), sources);
+
+    const diff = await run(['diff', lockfile, lockfile]);
+    assert.equal(diff.code, 0, diff.stderr);
+    assert.match(diff.stdout, /^Added: 0\nRemoved: 0\nChanged: 0\nUnchanged: 2$/m);
+
+    const risk = await run(['risk', lockfile, '--min', 'low']);
+    assert.equal(risk.code, 0, risk.stderr);
+    assert.match(risk.stdout, /file_write: high/);
+    assert.match(risk.stdout, /web_search: low/);
+  });
+
   it('fails conflicting imports with both source locations and no output', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'toolmirror-conflict-'));
     const first = join(directory, 'first.json');
