@@ -37,6 +37,8 @@ Generate Markdown documentation:
 toolmirror docs toolmirror.lock.json --output TOOLING.md
 ```
 
+Generated index links use deterministic heading anchors. Tool names that normalize to the same anchor receive stable numeric suffixes such as `foo-bar-2`.
+
 Compare exactly two snapshots. The command exits `2` when catalogs differ:
 
 ```sh

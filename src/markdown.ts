@@ -1,6 +1,7 @@
 import type { ToolCatalog, ToolDefinition } from './types.js';
 
 export function renderMarkdown(catalog: ToolCatalog): string {
+  const anchors = uniqueAnchors(catalog.tools.map((tool) => tool.name));
   const lines: string[] = [
     '# Tool Catalog',
     '',
@@ -10,21 +11,21 @@ export function renderMarkdown(catalog: ToolCatalog): string {
     ''
   ];
 
-  for (const tool of catalog.tools) {
-    lines.push(`- [${escapeMarkdown(tool.name)}](#${slug(tool.name)}) - ${tool.risk.level}`);
+  for (const [index, tool] of catalog.tools.entries()) {
+    lines.push(`- [${escapeMarkdown(tool.name)}](#${anchors[index]}) - ${tool.risk.level}`);
   }
 
   lines.push('');
 
-  for (const tool of catalog.tools) {
-    renderTool(lines, tool);
+  for (const [index, tool] of catalog.tools.entries()) {
+    renderTool(lines, tool, anchors[index]);
   }
 
   return `${lines.join('\n')}\n`;
 }
 
-function renderTool(lines: string[], tool: ToolDefinition): void {
-  lines.push(`## ${escapeMarkdown(tool.name)}`, '');
+function renderTool(lines: string[], tool: ToolDefinition, anchor: string): void {
+  lines.push(`<h2 id="${anchor}">${escapeHtml(tool.name)}</h2>`, '');
   if (tool.description) {
     lines.push(tool.description, '');
   }
@@ -48,6 +49,25 @@ function renderTool(lines: string[], tool: ToolDefinition): void {
 
 function slug(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function uniqueAnchors(names: string[]): string[] {
+  const counts = new Map<string, number>();
+
+  return names.map((name) => {
+    const base = slug(name) || 'tool';
+    const count = (counts.get(base) ?? 0) + 1;
+    counts.set(base, count);
+    return count === 1 ? base : `${base}-${count}`;
+  });
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function escapeMarkdown(value: string): string {
