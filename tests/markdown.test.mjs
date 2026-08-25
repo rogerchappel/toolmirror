@@ -18,7 +18,7 @@ describe('renderMarkdown', () => {
   });
 
   it('assigns deterministic unique anchors to colliding tool names', () => {
-    const names = ['foo-bar', 'foo_bar', 'foo bar', '!!!', '???'];
+    const names = ['foo-bar', 'foo_bar', 'foo bar', '!!!', '???', '<danger & "quote">'];
     const tools = names.map((name) => ({
       name,
       description: '',
@@ -32,8 +32,9 @@ describe('renderMarkdown', () => {
     const indexAnchors = [...markdown.matchAll(/\]\(#([^)]+)\)/g)].map((match) => match[1]);
     const headingAnchors = [...markdown.matchAll(/<h2 id="([^"]+)">/g)].map((match) => match[1]);
 
-    assert.deepEqual(indexAnchors, ['foo-bar', 'foo-bar-2', 'foo-bar-3', 'tool', 'tool-2']);
+    assert.deepEqual(indexAnchors, ['foo-bar', 'foo-bar-2', 'foo-bar-3', 'tool', 'tool-2', 'danger-quote']);
     assert.deepEqual(headingAnchors, indexAnchors);
+    assert.match(markdown, /<h2 id="danger-quote">&lt;danger &amp; &quot;quote&quot;&gt;<\/h2>/);
     for (const anchor of indexAnchors) {
       assert.equal(headingAnchors.filter((candidate) => candidate === anchor).length, 1);
     }
