@@ -25,6 +25,10 @@ Normalize one or more tool dumps:
 toolmirror import tools.json --output toolmirror.lock.json
 ```
 
+Use `-` for one input from standard input. An import may combine that single
+stdin input with file inputs, but supplying `-` more than once is a usage error
+and exits with status `1` before stdin is read.
+
 When multiple inputs define the same tool name, identical normalized definitions
 are collapsed into one entry. Its `source` is the lexicographically first source
 location, so reversing the inputs does not change the lockfile. Conflicting

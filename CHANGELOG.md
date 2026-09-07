@@ -11,6 +11,10 @@ format and uses semantic versioning when versioned releases are published.
 
 - Initial project setup.
 
+### Fixed
+
+- Reject duplicate `-` inputs to `toolmirror import` before reading stdin.
+
 ## Release Links
 
 - Unreleased:
