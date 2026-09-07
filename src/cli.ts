@@ -57,6 +57,9 @@ async function importCommand(args: ParsedArgs): Promise<number> {
   if (args.positionals.length === 0) {
     throw new Error('import requires at least one JSON input');
   }
+  if (args.positionals.filter((path) => path === '-').length > 1) {
+    throw new Error('import accepts at most one stdin input ("-")');
+  }
 
   const inputs = await Promise.all(
     args.positionals.map(async (path) => ({
