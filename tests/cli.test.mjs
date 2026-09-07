@@ -55,9 +55,22 @@ describe('CLI argument contracts', () => {
     assert.match(await readFile(riskOutput, 'utf8'), /^Risk report/);
   });
 
-  it('preserves stdin and multiple inputs for import', async () => {
+  it('rejects duplicate stdin inputs before consuming stdin', async () => {
+    const result = await run(['import', '-', '-'], { input: '{not valid json' });
+    assert.equal(result.code, 1);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, 'toolmirror: import accepts at most one stdin input ("-")\n');
+  });
+
+  it('preserves one stdin input combined with a file', async () => {
     const json = await readFile(fixture, 'utf8');
     const imported = await run(['import', '-', fixture], { input: json });
+    assert.equal(imported.code, 0, imported.stderr);
+    assert.equal(JSON.parse(imported.stdout).tools.length, 2);
+  });
+
+  it('preserves multiple file inputs', async () => {
+    const imported = await run(['import', fixture, fixture]);
     assert.equal(imported.code, 0, imported.stderr);
     assert.equal(JSON.parse(imported.stdout).tools.length, 2);
   });
