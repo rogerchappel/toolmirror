@@ -3,8 +3,18 @@ import { dirname } from 'node:path';
 import type { JsonValue } from './types.js';
 
 export async function readJsonFile(path: string): Promise<JsonValue> {
+  const label = path === '-' ? 'stdin' : path;
   const raw = path === '-' ? await readStdin() : await readFile(path, 'utf8');
-  return JSON.parse(raw) as JsonValue;
+  try {
+    return JSON.parse(stripBomPrefix(raw)) as JsonValue;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`${label}: ${detail}`);
+  }
+}
+
+function stripBomPrefix(raw: string): string {
+  return raw.startsWith('\uFEFF') ? raw.slice(1) : raw;
 }
 
 export async function writeTextFile(path: string | undefined, content: string): Promise<void> {
