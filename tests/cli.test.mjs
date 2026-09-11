@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 const cli = new URL('../dist/cli.js', import.meta.url);
 const fixture = new URL('./fixtures/codex-tools.json', import.meta.url).pathname;
+const bomFixture = new URL('./fixtures/bom-catalog.json', import.meta.url).pathname;
 
 function run(args, { input } = {}) {
   return new Promise((resolve, reject) => {
@@ -147,5 +148,81 @@ describe('CLI argument contracts', () => {
     assert.match(report.stdout, /ExecuteCommand: high - matches high-risk verb\(s\): execute/);
     assert.match(report.stdout, /sendEmail: high - matches high-risk verb\(s\): send/);
     assert.match(report.stdout, /senderProfile: low - no risky verbs or sensitive parameters detected/);
+  });
+});
+
+describe('UTF-8 BOM tolerance and parse diagnostics', () => {
+  it('imports BOM-prefixed files with output identical to the BOM-free input', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'toolmirror-bom-equal-'));
+    const plainDir = join(directory, 'plain');
+    const bomDir = join(directory, 'bom');
+    await mkdir(plainDir, { recursive: true });
+    await mkdir(bomDir, { recursive: true });
+    const plainContent = await readFile(fixture, 'utf8');
+    await writeFile(join(plainDir, 'catalog.json'), plainContent);
+    await writeFile(join(bomDir, 'catalog.json'), `\uFEFF${plainContent}`);
+
+    const plain = await run(['import', join(plainDir, 'catalog.json')]);
+    assert.equal(plain.code, 0, plain.stderr);
+    const bom = await run(['import', join(bomDir, 'catalog.json')]);
+    assert.equal(bom.code, 0, bom.stderr);
+    assert.equal(bom.stdout, plain.stdout);
+  });
+
+  it('imports BOM-prefixed stdin and mixes BOM and plain file inputs unchanged', async () => {
+    const plainContent = await readFile(fixture, 'utf8');
+    const plainStdin = await run(['import', '-'], { input: plainContent });
+    assert.equal(plainStdin.code, 0, plainStdin.stderr);
+    const bomStdin = await run(['import', '-'], { input: `\uFEFF${plainContent}` });
+    assert.equal(bomStdin.code, 0, bomStdin.stderr);
+    assert.equal(bomStdin.stdout, plainStdin.stdout);
+    const combined = await run(['import', fixture, bomFixture]);
+    assert.equal(combined.code, 0, combined.stderr);
+    assert.equal(JSON.parse(combined.stdout).tools.length, 2);
+  });
+
+  it('accepts BOM-prefixed catalogs for docs, diff, and risk', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'toolmirror-bom-commands-'));
+    const lockfile = join(directory, 'toolmirror.lock.json');
+    const imported = await run(['import', bomFixture, '--output', lockfile]);
+    assert.equal(imported.code, 0, imported.stderr);
+
+    const bomLockfile = join(directory, 'bom.lock.json');
+    await writeFile(bomLockfile, `\uFEFF${await readFile(lockfile, 'utf8')}`);
+
+    const docs = await run(['docs', bomLockfile]);
+    assert.equal(docs.code, 0, docs.stderr);
+    assert.match(docs.stdout, /^# Tool Catalog/m);
+
+    const diff = await run(['diff', bomLockfile, lockfile]);
+    assert.equal(diff.code, 0, diff.stderr);
+
+    const risk = await run(['risk', bomLockfile]);
+    assert.equal(risk.code, 0, risk.stderr);
+  });
+
+  it('names the failing file path in JSON parse errors', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'toolmirror-parse-errors-'));
+    const broken = join(directory, 'broken.json');
+    await writeFile(broken, 'not json');
+
+    const single = await run(['import', broken]);
+    assert.equal(single.code, 1);
+    assert.ok(single.stderr.startsWith(`toolmirror: ${broken}: `), single.stderr);
+
+    const mixed = await run(['import', fixture, broken]);
+    assert.equal(mixed.code, 1);
+    assert.ok(mixed.stderr.startsWith(`toolmirror: ${broken}: `), mixed.stderr);
+    assert.ok(!mixed.stderr.includes(fixture), mixed.stderr);
+
+    const diff = await run(['diff', fixture, broken]);
+    assert.equal(diff.code, 1);
+    assert.ok(diff.stderr.startsWith(`toolmirror: ${broken}: `), diff.stderr);
+  });
+
+  it('names stdin in parse errors for piped input', async () => {
+    const result = await run(['import', '-'], { input: '{"tools": [' });
+    assert.equal(result.code, 1);
+    assert.ok(result.stderr.startsWith('toolmirror: stdin: '), result.stderr);
   });
 });
