@@ -14,6 +14,11 @@ format and uses semantic versioning when versioned releases are published.
 ### Fixed
 
 - Reject duplicate `-` inputs to `toolmirror import` before reading stdin.
+- Accept UTF-8 BOM-prefixed JSON inputs for files and stdin across `import`,
+  `docs`, `diff`, and `risk`; the lockfile is identical to the same BOM-free
+  content.
+- JSON parse failures now name the failing input
+  (`toolmirror: <input>: <message>`) instead of an unlabeled parser message.
 
 ## Release Links
 

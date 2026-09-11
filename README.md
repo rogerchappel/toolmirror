@@ -29,6 +29,13 @@ Use `-` for one input from standard input. An import may combine that single
 stdin input with file inputs, but supplying `-` more than once is a usage error
 and exits with status `1` before stdin is read.
 
+File and stdin inputs may begin with a UTF-8 byte-order mark; the mark is
+stripped before parsing, so Windows PowerShell or editor dumps import unchanged
+and produce lockfiles identical to the same BOM-free content. When JSON parsing
+fails the command exits `1` and the diagnostic is
+`toolmirror: <input>: <message>`, naming the failing file path or `stdin` so
+multi-input commands identify which input is broken.
+
 When multiple inputs define the same tool name, identical normalized definitions
 are collapsed into one entry. Its `source` is the lexicographically first source
 location, so reversing the inputs does not change the lockfile. Conflicting
@@ -118,7 +125,9 @@ Use `npm run package:smoke` to inspect `npm pack --dry-run --json` and assert th
 
 toolmirror extracts supported tool-definition shapes from JSON and normalizes
 them into a common catalog; it does not interpret every vendor-specific schema
-extension. Default-value redaction is heuristic and is not a substitute for
+extension. Input is decoded as UTF-8 and only a leading byte-order mark is
+stripped; other encodings and stray BOMs remain parse errors. Default-value
+redaction is heuristic and is not a substitute for
 preventing secrets from entering source catalogs. Risk levels are likewise
 name- and parameter-based signals, not proof that a tool is safe or unsafe.
 Review imported definitions, generated documentation, diffs, and risk reports
