@@ -58,9 +58,9 @@ jobs:
           fi
 
           if [ -f package-lock.json ]; then
-            npm ci
+            npm ci --ignore-scripts
           else
-            npm install
+            npm install --ignore-scripts --package-lock=false
           fi
 
           npm run release:check
